@@ -1,15 +1,11 @@
-from django import apps
+from django.apps import AppConfig
+from django.utils.module_loading import autodiscover_modules
 
-from bellhop.main import BellHop
 
-
-class BellHopConfig(apps.AppConfig):
+class BellHopConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "bellhop"
 
     def ready(self):
-        all_models = apps.apps.get_models()
-
-        for model in all_models:
-            if hasattr(model, "mount_uploader"):
-                BellHop.register(model)
+        super().ready()
+        autodiscover_modules("uploaders")

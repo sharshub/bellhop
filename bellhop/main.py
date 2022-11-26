@@ -1,33 +1,34 @@
 from django.db.models.query_utils import DeferredAttribute
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import pre_save, post_save, post_delete
 
 from bellhop.uploaders import BaseUploader
 
 
 class BellHop:
-    REGISTERED_MODELS = dict()
+    def __init__(self):
+        self._registry = {}
 
-    @classmethod
-    def register(cls, model):
-        uploader = cls._validate(model)
-        cls.REGISTERED_MODELS[model] = uploader
-        post_save.connect(cls.post_save, sender=model, weak=False)
-        post_delete.connect(cls.post_delete, sender=model, weak=False)
+    def register(self, model, uploader):
+        self._validate(model, uploader)
+        self._registry[model] = uploader
 
-    @classmethod
-    def post_save(cls, sender, **kwargs):
+        pre_save.connect(self.pre_save, sender=model, weak=False)
+        post_save.connect(self.post_save, sender=model, weak=False)
+        post_delete.connect(self.post_delete, sender=model, weak=False)
+
+    def pre_save(self, sender, **kwargs):
+        print("pre save signal received")
+        pass
+
+    def post_save(self, sender, **kwargs):
         print("post save signal received")
         pass
 
-    @classmethod
-    def post_delete(cls, sender, **kwargs):
+    def post_delete(self, sender, **kwargs):
         print("post delete signal received")
         pass
 
-    @classmethod
-    def _validate(cls, model):
-        uploader = getattr(model, "mount_uploader")
-
+    def _validate(self, model, uploader):
         assert (
             isinstance(uploader, type) and uploader.__base__ == BaseUploader
         ), "uploader should be a subclass of BaseUploader"
@@ -50,4 +51,5 @@ class BellHop:
             model.__name__,
         )
 
-        return uploader
+
+bellhop = BellHop()
