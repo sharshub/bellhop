@@ -17,6 +17,20 @@ class BellHop:
         self._validate(model, uploader)
         self._registry[model] = uploader
 
+        _uploadable_field_name = getattr(uploader, "uploadable")
+
+        setattr(
+            model,
+            "%s_url" % (_uploadable_field_name),
+            property(
+                lambda instance: self.engine.object_url(
+                    instance._meta.model.__name__.lower(),
+                    instance.id,
+                    getattr(instance, _uploadable_field_name),
+                )
+            ),
+        )
+
         pre_save.connect(self.pre_save, sender=model, weak=False)
         post_save.connect(self.post_save, sender=model, weak=False)
         post_delete.connect(self.post_delete, sender=model, weak=False)
@@ -54,8 +68,8 @@ class BellHop:
             _id = instance.id
             _file = getattr(instance, "bellhop_%s" % (_uploadable_field_name))
             self.engine.save(
-                model_name=instance._meta.model.__name__.lower(),
-                model_id=_id,
+                model_name=sender.__name__.lower(),
+                object_id=_id,
                 file=_file,
             )
 
@@ -63,8 +77,8 @@ class BellHop:
         instance = kwargs.get("instance")
 
         self.engine.delete(
-            model_name=instance._meta.model.__name__.lower(),
-            model_id=instance.id,
+            model_name=sender.__name__.lower(),
+            object_id=instance.id,
         )
 
     def _validate(self, model, uploader):
